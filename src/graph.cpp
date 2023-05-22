@@ -193,6 +193,78 @@ next_kmer:
 }
 
 /**
+ * This function extracts k-mers from a sequence and adds them to the local hash table.
+ *
+ * @param local_kmer_table
+ * @param str dna sequence
+ * @param color color flag
+ * @param reverse merge complements
+ */
+void graph::local_add_kmers(hash_map<kmer_t, uint64_t>& local_kmer_table, string& str, uint64_t& color, bool& reverse) {
+    if (str.length() < kmer::k) return;    // not enough characters
+
+    uint64_t pos;    // current position in the string, from 0 to length
+    kmer_t kmer;    // create a new empty bit sequence for the k-mer
+    kmer_t rcmer;    // create a bit sequence for the reverse complement
+
+    kmerAmino_t kmerAmino=0;    // create a new empty bit sequence for the k-mer
+
+    uint64_t begin = 0;
+next_kmer:
+    pos = begin;
+
+    for (; pos < str.length(); ++pos) {    // collect the bases from the string
+        if (!isAllowedChar(pos, str)) {
+            begin = pos+1;    // str = str.substr(pos+1, string::npos);
+            goto next_kmer;    // unknown base, start a new k-mer from the beginning
+        }
+        if (!isAmino) {
+            kmer::shift_right(kmer, str[pos]);    // shift each base into the bit sequence
+
+            if (pos+1 - begin >= kmer::k) {
+                rcmer = kmer;
+                if (reverse) kmer::reverse_complement(rcmer, true);    // invert the k-mer, if necessary
+                color64::set(local_kmer_table[rcmer], color);    // update the k-mer with the current color
+            }
+        } else {
+            kmerAmino::shift_right(kmerAmino, str[pos]);    // shift each base into the bit sequence
+
+            if (pos+1 - begin >= kmerAmino::k) {
+                color::set(kmer_tableAmino[kmerAmino], color);    // update the k-mer with the current color
+            }
+        }
+
+
+    }
+}
+
+/**
+ * This function transfers k-mers from the local hash table to the main hash table.
+ *
+ * @param local_kmer_table
+ * @param firstFile
+ * @param lastFile
+ */
+void graph::merge_kmers(hash_map<kmer_t, uint64_t>& local_kmer_table, uint64_t& firstFile, uint64_t& lastFile) {
+                
+    auto base_it = local_kmer_table.begin();
+    while(base_it != local_kmer_table.end()) {
+        color_t& global_color = kmer_table[base_it->first];
+        uint64_t local_color = base_it->second;
+        ++ base_it;
+         
+        for (uint64_t i = firstFile; i <= lastFile; i++) {
+            if (local_color & 0b1u == 0b1u)
+                color::set(global_color, i);
+            local_color >>= 01u;
+        }            
+    }
+    
+    local_kmer_table.clear();
+}
+
+
+/**
  * This function extracts k-mer minimizers from a sequence and adds them to the hash table.
  *
  * @param str dna sequence

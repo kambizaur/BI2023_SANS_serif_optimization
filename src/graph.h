@@ -136,6 +136,25 @@ public:
      * @param reverse merge complements
      */
     static void add_kmers(string& str, uint64_t& color, bool& reverse);
+    
+    /**
+     * This function extracts k-mers from a sequence and adds them to the local hash table.
+     *
+     * @param local_kmer_table
+     * @param str dna sequence
+     * @param color color flag
+     * @param reverse merge complements
+     */
+    static void local_add_kmers(hash_map<kmer_t, uint64_t>& local_kmer_table, string& str, uint64_t& color, bool& reverse);
+
+    /**
+     * This function transfers k-mers from the local hash table to the main hash table.
+     *
+     * @param local_kmer_table
+     * @param firstFile
+     * @param lastFile
+     */
+    static void merge_kmers(hash_map<kmer_t, uint64_t>& local_kmer_table, uint64_t& firstFile, uint64_t& lastFile);
 
     /**
      * This function extracts k-mer minimizers from a sequence and adds them to the hash table.
