@@ -138,6 +138,24 @@ public:
     static void add_kmers(string& str, uint64_t& color, bool& reverse);
 
     /**
+     * This function extracts k-mers from a sequence and adds them to the local hash table.
+     *
+     * @param local_kmer_table
+     * @param str dna sequence
+     * @param color color flag
+     * @param reverse merge complements
+     */
+    static void local_add_kmers(hash_map<kmer_t, color_t>& local_kmer_table, string& str, uint64_t& color, bool& reverse);
+
+    /**
+     * This function transfers k-mers from the second hash table to the first hash table.
+     *
+     * @param first_kmer_table
+     * @param second_kmer_table
+     */
+    static void merge_kmers(hash_map<kmer_t, color_t>& first_kmer_table, hash_map<kmer_t, color_t>& second_kmer_table);
+
+    /**
      * This function extracts k-mer minimizers from a sequence and adds them to the hash table.
      *
      * @param str dna sequence
@@ -178,10 +196,10 @@ public:
     /**
      * This function iterates over the hash table and calculates the split weights.
      *
-     * @param mean weight function
+     * @param kmer_table
      * @param verbose print progress
      */
-    static void add_weights(bool& verbose);
+    static void add_weights(hash_map<kmer_t, color_t>& kmer_table, bool& verbose);
 
     /**
      * This function adds a single split (weight and colors) to the output list.

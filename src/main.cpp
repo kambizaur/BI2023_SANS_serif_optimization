@@ -3,6 +3,7 @@
 // gzstream imports
 #include <cstring>
 #include "gz/gzstream.h"
+#include <omp.h>
 
 
 /**
@@ -140,6 +141,9 @@ int main(int argc, char* argv[]) {
     bool check_n = false; // compare num (number of input genomes) to maxN (compile parameter DmaxN)
     string path = "./makefile"; // path to makefile
     uint64_t code = 1;
+    
+    uint64_t num_threads = 1;    // number of threads
+
 
 
     /**
@@ -171,6 +175,9 @@ int main(int argc, char* argv[]) {
             kmer = stoi(argv[++i]);    // Length of k-mers (default: 31, 10 for amino acids)
             userKmer = true;
         }
+        else if (strcmp(argv[i], "-p") == 0 || strcmp(argv[i], "--parallel") == 0) {
+            num_threads = stoi(argv[++i]);    // Number of threads (default: 1)
+        }        
         else if (strcmp(argv[i], "-w") == 0 || strcmp(argv[i], "--window") == 0) {
             window = stoi(argv[++i]);    // Number of k-mers (default: 1)
             if (window > 1) {
@@ -605,27 +612,36 @@ int main(int argc, char* argv[]) {
     kmer::init(kmer);      // initialize the k-mer length
     kmerAmino::init(kmer); // initialize the k-mer length
     color::init(num);    // initialize the color number
+    vector<hash_map<kmer_t, color_t>> kmer_tables(num_threads);
 
     if (!input.empty() && splits.empty()) {
         if (verbose) {
             cout << "SANS::main(): Reading input files..." << flush;
         }
+        
+        omp_set_num_threads(num_threads);
+    #pragma omp parallel
+    {
+        uint64_t threadID = omp_get_thread_num();
+        uint64_t numberOfThreads = omp_get_num_threads();
+
+        hash_map<kmer_t, color_t>& local_kmer_table = kmer_tables[threadID];        
+        
         string sequence;    // read in the sequence files and extract the k-mers
-
-
-        for (uint64_t i = 0; i < gen_files.size(); ++i) {
+        
+        for (uint64_t i = threadID; i < gen_files.size(); i += numberOfThreads) {
             vector<string> target_files = gen_files[i]; // the filenames corresponding to the target	    
             for (string file_name: target_files){
-		
-	 	        char c_name[(folder + file_name).length()]; // Create char array for c compatibilty
-		        strcpy(c_name, (folder + file_name).c_str()); // Transcire to char array
-
+        
+                char c_name[(folder + file_name).length()]; // Create char array for c compatibilty
+                strcpy(c_name, (folder + file_name).c_str()); // Transcire to char array
+    
                 igzstream file(c_name, ios::in);    // input file stream
                 if (verbose) {
-                    cout << "\33[2K\r" << folder+file_name<< " (" << i+1 << "/" << denom_file_count << ")" << endl;    // print progress
+                    cout << "\33[2K\r" << "Thread " << threadID << " : " << folder+file_name<< " (" << i+1 << "/" << denom_file_count << ")" << endl;    // print progress
                 }
                 count::deleteCount();
-
+    
                 string appendixChars; 
                 string line;    // read the file line by line
                 while (getline(file, line)) {
@@ -636,13 +652,13 @@ int main(int argc, char* argv[]) {
                                         : graph::add_minimizers(sequence, i, reverse, window);
                             } else {
                                 iupac > 1 ? graph::add_kmers(sequence, i, reverse, iupac)
-                                        : graph::add_kmers(sequence, i, reverse);
+                                        : graph::local_add_kmers(local_kmer_table, sequence, i, reverse);
                             }
-
+    
                             sequence.clear();
-
-                            if (verbose) {
-                                cout << "\33[2K\r" << line << flush << endl;    // print progress
+    
+                            if (verbose && threadID == 0) {
+                                cout << "\33[2K\r" << "Thread " << threadID << " : " << line << flush << endl;    // print progress
                             }
                         }
                         else if (line[0] == '+') {    // FASTQ quality values -> ignore
@@ -661,7 +677,7 @@ int main(int argc, char* argv[]) {
                                     appendixChars = newLine.substr(line.length() - toManyChars, toManyChars);
                                     newLine = newLine.substr(0, line.length() - toManyChars);
                                 }
-
+    
                                 newLine = translator::translate(newLine);
                             }
                             sequence += newLine;    // FASTA & FASTQ sequence -> read
@@ -676,18 +692,41 @@ int main(int argc, char* argv[]) {
                             : graph::add_minimizers(sequence, i, reverse, window);
                 } else {
                     iupac > 1 ? graph::add_kmers(sequence, i, reverse, iupac)
-                            : graph::add_kmers(sequence, i, reverse);
+                            : graph::local_add_kmers(local_kmer_table, sequence, i, reverse);
                 }
                 sequence.clear();
-
+    
                 
-                if (verbose) {
+                if (verbose && num_threads == 1) {
                     cout << "\33[2K\r" << flush;
                 }
                 file.close();
             }
             graph::clear_thread();
+            
+        }    
+
+        
+    }
+    
+        uint64_t vector_size = kmer_tables.size();
+        while (vector_size > 1) {
+            if (verbose) {
+                cout << "\33[2K\r" << "MERGING 1/" << vector_size << endl;
+            }
+            omp_set_num_threads(vector_size / 2);   
+        #pragma omp parallel
+        {   
+            uint64_t threadID = omp_get_thread_num();
+            graph::merge_kmers(kmer_tables[threadID], kmer_tables[vector_size - 1 - threadID]);   
         }
+            vector_size = vector_size / 2 + vector_size % 2;
+            kmer_tables.resize(vector_size);
+        }  
+        if (verbose) {        
+            cout << "\33[2K\r" << "MERGING 1/" << vector_size << endl;
+        }
+        
     }
 
 
@@ -754,7 +793,7 @@ int main(int argc, char* argv[]) {
     if (verbose) {
         cout << "Processing splits..." << flush;
     }
-    graph::add_weights(verbose);  // accumulate split weights
+    graph::add_weights(kmer_tables[0], verbose);  // accumulate split weights
 
     if (verbose) {
         cout << "Adding splits..." << flush;
