@@ -698,7 +698,6 @@ int main(int argc, char* argv[]) {
      * (Has to be executed after sequence processing)
      */ 
 
-double min_value = numeric_limits<double>::min(); // Current minimal weight represented in the top list
 #ifdef useBF
     if (!graph.empty()) {
         if (verbose) {
@@ -731,7 +730,7 @@ double min_value = numeric_limits<double>::min(); // Current minimal weight repr
                 for (auto uc_it=uc_kmers[i].begin(unitig_map); uc_it != uc_kmers[i].end(); ++uc_it){
                     color::set(color, name_table[cdbg.getColorName(uc_it.getColorID())]); // set the k-mer color
 		}
-                min_value = graph::add_cdbg_colored_kmer(mean, kmer_sequence, color, min_value);
+                graph::add_cdbg_colored_kmer(kmer_sequence, color);
 	   }
         }
     }
@@ -755,7 +754,14 @@ double min_value = numeric_limits<double>::min(); // Current minimal weight repr
     if (verbose) {
         cout << "Processing splits..." << flush;
     }
-    graph::add_weights(mean, min_value, verbose);  // accumulate split weights
+    graph::add_weights(verbose);  // accumulate split weights
+
+    if (verbose) {
+        cout << "Adding splits..." << flush;
+    }
+    graph::add_splits(mean, verbose);  // add splits to output list
+
+
 
     if (verbose) {
         cout << "\33[2K\r" << "Filtering splits..." << flush;
