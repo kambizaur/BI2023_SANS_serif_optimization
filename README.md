@@ -40,12 +40,12 @@ In the first approach, the files are processed one by one, and the processing of
 
 In the second approach, the files are processed in parallel, and each thread populates its own k-mer hash table. The thread processes the files in batches and after each batch transfers the data to the global hash table.
 
-In the third approach, the threads first process all the files that were distributed to them, and then, in several iterations, the local hash tables of the threads are merged into one big one. The hash tables are merged in pairs, so their number is halved at each iteration.
+In the third approach, the threads first process all the files that were distributed to them, and then, in several iterations, the local hash tables of the threads are merged into one global hash table. The hash tables are merged in pairs, so their number is halved at each iteration.
 
 The second and third approaches, as the most applicable, are available in branches parallel_batch (the second approach) and parallel_mergers (the third approach). Splits' weighting optimization has also been added to these branches.
 
 ### Requirements
-For the main program, there are no strict dependencies other than C++ version 14.
+There are no strict dependencies other than C++ version 14.
 
 ### Compilation
 
