@@ -36,7 +36,108 @@ The modified version of SANS serif is available in the main branch.
 
 ![](./plots/parallel.png)
 
-The second and third approaches, as the most applicable, are available in branches parallel_batch (the second approach) and parallel_mergers (the third approach).
+In the first approach, the files are processed one by one, and the processing of one file is parallelized.
+
+In the second approach, the files are processed in parallel, and each thread populates its own k-mer hash table. The thread processes the files in batches and after each batch transfers the data to the global hash table.
+
+In the third approach, the threads first process all the files that were distributed to them, and then, in several iterations, the local hash tables of the threads are merged into one big one. The hash tables are merged in pairs, so their number is halved at each iteration.
+
+The second and third approaches, as the most applicable, are available in branches parallel_batch (the second approach) and parallel_mergers (the third approach). Splits' weighting optimization has also been added to these branches.
+
+### Requirements
+For the main program, there are no strict dependencies other than C++ version 14.
+
+### Compilation
+
+```
+cd <SANS directory>
+make
+```
+By default, the installation creates:
+* a binary (*SANS*)
+
+In the *makefile*, two parameters are specified:
+
+* *-DmaxK*: Maximum k-mer length that can be chosen when running SANS.  Default: 32
+* *-DmaxN*: Maximum number of input files for SANS. Default: 64
+
+These values can simply be increased if necessary. To keep memory requirements small, do not choose these values unnecessarily large.
+    
+### Usage
+
+In modified versions, the following input arguments are available:
+
+```
+Usage: SANS [PARAMETERS]
+
+  Input arguments:
+
+    -i, --input   	 Input file: file of files format
+                  	 Either: list of files, one genome per line (space-separated for multifile genomes)
+                  	 Or: kmtricks input format (see https://github.com/tlemane/kmtricks)
+
+  Output arguments:
+
+    -o, --output  	 Output TSV file: list of splits, sorted by weight desc.
+
+    -N, --newick  	 Output Newick file
+                  	 (only applicable in combination with -f strict or n-tree)
+
+    (at least --output or --newick must be provided, or both)
+
+  Optional arguments:
+
+    -k, --kmer    	 Length of k-mers (default: 31, or 10 for --amino and --code)
+
+    -t, --top     	 Number of splits in the output list (default: all).
+                  	 Use -t <integer>n to limit relative to number of input files, or
+                  	 use -t <integer> to limit by absolute value.
+
+    -m, --mean    	 Mean weight function to handle asymmetric splits
+                  	 options: arith: arithmetic mean
+                  	          geom:  geometric mean
+                  	          geom2: geometric mean with pseudo-counts (default)
+
+    -f, --filter  	 Output (-o, -N) is a greedy maximum weight subset (see README)
+                  	 options: strict: compatible to a tree
+                  	          weakly: weakly compatible network
+                  	          n-tree: compatible to a union of n trees
+                  	                  (where n is an arbitrary number, e.g. 2-tree)
+
+    -n, --norev   	 Do not consider reverse complement k-mers
+
+    -M, --maxN    	 Compare number of input genomes to compile paramter DmaxN
+                  	 Add path/to/makefile (default is makefile in current working directory).
+
+    -v, --verbose 	 Print information messages during execution
+  
+```
+
+A more detailed description of the arguments is available in [the original repository](https://gitlab.ub.uni-bielefeld.de/gi/sans).
+
+Additional flags are available in versions with parallelization:
+```
+    -p, --parallel   Number of threads (default: 1)
+
+    -b, --batch      Batch size (only in the batch parallelization, default and maximum: 64)
+```
+
+### Examples
+
+1. **Determine splits from assemblies or read files**
+   ```
+   SANS -i list.txt -o sans.splits -k 31
+   ```
+
+2. **Running in 4 threads.**
+   ```
+   SANS -i list.txt -o sans.splits -k 60 -p 4
+   ```
+   
+2. **Running with batch size 10**
+   ```
+   SANS -i list.txt -o sans.splits -k 60 -p 4 -b 10
+   ```
 
 ### References
 
