@@ -145,13 +145,11 @@ Additional flags are available in versions with parallelization:
    cd <SANS directory>
    cd example_data/drosophila
 
-   # download data: whole genome (or coding sequences)
+   # download data
    ./download_WG.sh
-   (./download_CDS.sh)
 
    # run SANS greedy tree
    ../../SANS -i WG/list.txt -o sans_greedytree_WG.splits -f strict -N sans_greedytree_WG.new -v
-   (../../SANS -i CDS/list.txt -o sans_greedytree_CDS.splits -f strict -N sans_greedytree_CDS.new -v -c)
    ```
 
 5. **Virus example data**
