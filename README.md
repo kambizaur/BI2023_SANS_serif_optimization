@@ -134,9 +134,37 @@ Additional flags are available in versions with parallelization:
    SANS -i list.txt -o sans.splits -k 60 -p 4
    ```
    
-2. **Running with batch size 10**
+3. **Running with batch size 10**
    ```
    SANS -i list.txt -o sans.splits -k 60 -p 4 -b 10
+   ```
+
+4. **Drosophila example data**
+   ```
+   # go to example directory
+   cd <SANS directory>
+   cd example_data/drosophila
+
+   # download data: whole genome (or coding sequences)
+   ./download_WG.sh
+   (./download_CDS.sh)
+
+   # run SANS greedy tree
+   ../../SANS -i WG/list.txt -o sans_greedytree_WG.splits -f strict -N sans_greedytree_WG.new -v
+   (../../SANS -i CDS/list.txt -o sans_greedytree_CDS.splits -f strict -N sans_greedytree_CDS.new -v -c)
+   ```
+
+5. **Virus example data**
+   ```
+   # go to example directory
+   cd <SANS directory>
+   cd example_data/prasinoviruses
+
+   # download data
+   ./download.sh
+
+   # run SANS
+   ../../SANS -i fa/list.txt -o sans.splits -k 11 -t 130 -v
    ```
 
 ### References
